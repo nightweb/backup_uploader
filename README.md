@@ -61,14 +61,49 @@ List all files and folders in Google Drive or a Shared Drive:
 ./backup_uploader -c path/to/credentials.json -drive_id YOUR_DRIVE_ID -list
 ```
 
-## Options
+## Testing
 
-- `-c path/to/credentials.json` : Path to your Google Drive API credentials file.
-- `-upload_file /path/to/local/file.txt` : Path to the file to be uploaded.
-- `-folder_path "TargetFolder/SubFolder"` : Path to the folder on Google Drive where the file should be uploaded.
-- `-drive_id YOUR_DRIVE_ID` : ID of the Shared Drive (optional if uploading to My Drive).
-- `-mkdir` : Create directories if they do not exist.
-- `-list` : List all files and folders.
+To run tests for the Backup Uploader, follow these steps:
+
+1. Make sure you have your `credentials.json` file set up as described above.
+
+2. Set up the necessary environment variables or paths in the test file `backup_uploader_test.go`.
+
+3. Run the tests using the `go test` command:
+
+   ```sh
+   go test
+   ```
+
+   This will execute the test cases defined in `backup_uploader_test.go` and help ensure the functionality of the Backup Uploader.
+
+## Contributing
+
+If you'd like to contribute to this project, follow these steps:
+
+1. Fork the repository.
+
+2. Create a new branch for your feature or bugfix:
+
+   ```sh
+   git checkout -b feature-name
+   ```
+
+3. Make your changes and commit them:
+
+   ```sh
+   git commit -m "Description of the feature or fix"
+   ```
+
+4. Push your changes to your fork:
+
+   ```sh
+   git push origin feature-name
+   ```
+
+5. Create a Pull Request from your fork's branch to the `main` branch of this repository.
+
+6. Ensure your code passes all tests before submitting your PR.
 
 ## License
 
