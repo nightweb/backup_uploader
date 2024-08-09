@@ -35,6 +35,36 @@ Backup Uploader is a command-line tool for uploading files to Google Drive, with
    - Enable the Google Drive API for your project.
    - Create credentials for a service account and download the `credentials.json` file.
 
+## Building for Different Platforms
+
+You can build the `backup_uploader` binary for different operating systems and architectures using the following commands:
+
+### For Linux (64-bit)
+
+```sh
+GOOS=linux GOARCH=amd64 go build -o backup_uploader_linux
+```
+
+### For Windows (64-bit)
+
+```sh
+GOOS=windows GOARCH=amd64 go build -o backup_uploader.exe
+```
+
+### For macOS (64-bit)
+
+```sh
+GOOS=darwin GOARCH=amd64 go build -o backup_uploader_mac
+```
+
+### For ARM (e.g., Raspberry Pi)
+
+```sh
+GOOS=linux GOARCH=arm go build -o backup_uploader_arm
+```
+
+These commands will generate binaries for the specified platforms, which you can then distribute and run on the respective systems.
+
 ## Usage
 
 ### Upload a File
