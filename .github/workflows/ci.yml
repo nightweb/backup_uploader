@@ -40,6 +40,8 @@ jobs:
         run: mv backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }} ./distr/
 
       - name: Commit binaries to distr directory
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
