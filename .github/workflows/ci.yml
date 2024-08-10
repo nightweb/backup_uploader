@@ -89,6 +89,8 @@ jobs:
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}  # Используйте PAT с правами "repo"
         with:
           tag_name: v0.1.0
           release_name: Release v0.1.0
@@ -100,8 +102,6 @@ jobs:
             - Windows: `backup_uploader_windows_amd64`
           draft: true
           prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
