@@ -56,14 +56,16 @@ jobs:
               --data-binary @"$file" \
               "${{ steps.get_release.outputs.upload_url }}?name=$name"
           done
+      - name: Use extracted tag
+        run: echo "The extracted tag is ${{ env.tag }}"
       - name: Commit changes to master
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git checkout ${{ github.ref }}
-          git checkout -b release-${{ github.ref }}
+          git checkout ${{ env.tag }}
+          git checkout -b release-${{ env.tag }}
           git add .
           git commit -m "Update after uploading artifacts for version ${{ github.ref }}"
-          git push origin release-${{ github.ref }}
+          git push origin release-${{ env.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Используем GITHUB_TOKEN для выполнения пуша
