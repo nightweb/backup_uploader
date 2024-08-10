@@ -1,140 +1,76 @@
+
 # Backup Uploader
 
-Backup Uploader is a command-line tool for uploading files to Google Drive, with support for creating directories if they don't exist.
+## Описание
 
-## Features
+`backup_uploader` - это инструмент для синхронизации файлов между локальной директорией и Google Drive. Он позволяет загружать и обновлять файлы на Google Drive, обеспечивая при этом проверку хэшей файлов для избежания дублирования и излишнего трафика.
 
-- Upload files to a specified directory on Google Drive or Shared Drives.
-- Automatically create directories along the path if they don't exist using the `-mkdir` option.
-- List files and folders in Google Drive or Shared Drives.
+## Возможности
 
-## Requirements
+- Синхронизация локальной директории с Google Drive (`to_drive`).
+- Синхронизация Google Drive с локальной директорией (`from_drive`).
+- Автоматическое создание отсутствующих папок на Google Drive при загрузке.
+- Сравнение файлов на основе MD5-хэшей.
+- Обновление только тех файлов, которые были изменены.
+- Поддержка режима отладки с подробным выводом информации (`-vv` или `--debug`).
 
-- Go 1.16 or higher
-- Google Drive API credentials
+## Установка
 
-## Installation
-
-1. Clone the repository:
-
+1. Установите Go (https://golang.org/doc/install).
+2. Клонируйте репозиторий:
    ```sh
-   git clone https://github.com/yourusername/backup-uploader.git
-   cd backup-uploader
+   git clone https://github.com/yourusername/backup_uploader.git
+   cd backup_uploader
    ```
 
-2. Build the binary:
-
+3. Соберите исполняемый файл:
    ```sh
    go build -o backup_uploader
    ```
 
-3. Obtain Google Drive API credentials and save them as `credentials.json`:
+## Использование
 
-   - Go to [Google Cloud Console](https://console.cloud.google.com/).
-   - Create a new project or use an existing one.
-   - Enable the Google Drive API for your project.
-   - Create credentials for a service account and download the `credentials.json` file.
+### Основные параметры
 
-## Building for Different Platforms
+- `-c` : Путь к файлу `credentials.json` для Google API (если не указан, используется `~/.backup_uploader/google/credentials.json`).
+- `-sync_folder` : Путь к локальной директории, которую нужно синхронизировать.
+- `-folder_path` : Путь к целевой папке на Google Drive.
+- `-drive_id` : ID Google Drive (для Shared Drives, необязательно).
+- `-file_mask` : Маска файлов для синхронизации (например, `*.txt`).
+- `-mkdir` : Флаг для создания папок на Google Drive, если они отсутствуют.
+- `-direction` : Направление синхронизации (`to_drive` или `from_drive`).
+- `-vv`, `--debug` : Включение режима отладки с подробным выводом информации.
 
-You can build the `backup_uploader` binary for different operating systems and architectures using the following commands:
+### Примеры использования
 
-### For Linux (64-bit)
-
-```sh
-GOOS=linux GOARCH=amd64 go build -o backup_uploader_linux
-```
-
-### For Windows (64-bit)
-
-```sh
-GOOS=windows GOARCH=amd64 go build -o backup_uploader.exe
-```
-
-### For macOS (64-bit)
-
-```sh
-GOOS=darwin GOARCH=amd64 go build -o backup_uploader_mac
-```
-
-### For ARM (e.g., Raspberry Pi)
-
-```sh
-GOOS=linux GOARCH=arm go build -o backup_uploader_arm
-```
-
-These commands will generate binaries for the specified platforms, which you can then distribute and run on the respective systems.
-
-## Usage
-
-### Upload a File
-
-Upload a file to a specific folder path within Google Drive or a Shared Drive:
-
-```sh
-./backup_uploader -c path/to/credentials.json -upload_file /path/to/local/file.txt -folder_path "TargetFolder/SubFolder" -drive_id YOUR_DRIVE_ID
-```
-
-### Create Directories Automatically
-
-Use the `-mkdir` option to automatically create directories if they don't exist:
-
-```sh
-./backup_uploader -c path/to/credentials.json -upload_file /path/to/local/file.txt -folder_path "TargetFolder/SubFolder" -drive_id YOUR_DRIVE_ID -mkdir
-```
-
-### List Files and Folders
-
-List all files and folders in Google Drive or a Shared Drive:
-
-```sh
-./backup_uploader -c path/to/credentials.json -drive_id YOUR_DRIVE_ID -list
-```
-
-## Testing
-
-To run tests for the Backup Uploader, follow these steps:
-
-1. Make sure you have your `credentials.json` file set up as described above.
-
-2. Set up the necessary environment variables or paths in the test file `backup_uploader_test.go`.
-
-3. Run the tests using the `go test` command:
+1. **Синхронизация локальной директории с Google Drive**:
 
    ```sh
-   go test
+   ./backup_uploader -c path/to/credentials.json -sync_folder /path/to/local/folder -folder_path "TargetFolder" -drive_id YOUR_DRIVE_ID -mkdir -direction to_drive -file_mask '*.txt' -vv
    ```
 
-   This will execute the test cases defined in `backup_uploader_test.go` and help ensure the functionality of the Backup Uploader.
-
-## Contributing
-
-If you'd like to contribute to this project, follow these steps:
-
-1. Fork the repository.
-
-2. Create a new branch for your feature or bugfix:
+2. **Синхронизация Google Drive с локальной директорией**:
 
    ```sh
-   git checkout -b feature-name
+   ./backup_uploader -c path/to/credentials.json -sync_folder /path/to/local/folder -folder_path "TargetFolder" -drive_id YOUR_DRIVE_ID -mkdir -direction from_drive -file_mask '*.txt' -vv
    ```
 
-3. Make your changes and commit them:
+### Отладка
 
-   ```sh
-   git commit -m "Description of the feature or fix"
-   ```
+При запуске скрипта с флагом `-vv` или `--debug` выводится отладочная информация, которая включает в себя:
 
-4. Push your changes to your fork:
+- Список файлов и их хэшей на Google Drive.
+- Список локальных файлов и их хэшей.
+- Сообщения о том, какие файлы были обновлены, пропущены или загружены заново.
 
-   ```sh
-   git push origin feature-name
-   ```
+### Пример тестирования
 
-5. Create a Pull Request from your fork's branch to the `main` branch of this repository.
+Для тестирования функциональности скрипта можно использовать следующую команду:
 
-6. Ensure your code passes all tests before submitting your PR.
+```sh
+go test -v
+```
 
-## License
+## Лицензия
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Этот проект лицензирован под лицензией MIT - см. файл [LICENSE](LICENSE) для подробностей.

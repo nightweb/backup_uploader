@@ -18,6 +18,36 @@ import (
 	"google.golang.org/api/option"
 )
 
+var (
+	debug            bool
+	syncFolderPath   string
+	credPath         string
+	folderPath       string
+	driveId          string
+	direction        string
+	fileMask         string
+	mkdir            bool
+	targetFolderPath string
+)
+
+func init() {
+	// Add flags for verbose output
+	flag.BoolVar(&debug, "vv", false, "Enable verbose output (debug mode)")
+	flag.BoolVar(&debug, "debug", false, "Enable verbose output (debug mode)")
+	flag.StringVar(&syncFolderPath, "sync_folder", "", "Path to the local folder to sync")
+	flag.StringVar(&credPath, "c",
+		filepath.Join(os.Getenv("HOME"), ".backup_uploader", "google", "credentials.json"),
+		"Path to credentials.json file")
+	flag.StringVar(&driveId, "drive_id", "", "Google Drive ID (for Shared Drives)")
+	flag.StringVar(&direction, "direction", "to_drive", "Sync direction: to_drive (default) or from_drive")
+	flag.StringVar(&fileMask, "file_mask", "*", "File mask to filter files for syncing")
+	flag.BoolVar(&mkdir, "mkdir", false, "Create directories if they do not exist")
+	flag.StringVar(&targetFolderPath, "folder_path", "", "Path to the target folder on Google Drive")
+}
+
+// Returns the MD5 hash of a file
+// @param filePath: Path to the file
+// @return: MD5 hash as a string
 func computeMD5(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -33,7 +63,12 @@ func computeMD5(filePath string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-// Функция для поиска или создания папки по пути
+// Function to find or create a folder by path on Google Drive
+// @param srv: Google Drive service instance
+// @param rootFolderID: ID of the root folder to start search from
+// @param folderPath: Path to the folder to find or create
+// @param mkdir: Create missing folders if true
+// @return: ID of the found or created folder
 func findOrCreateFolderByPath(srv *drive.Service, rootFolderID, folderPath string, mkdir bool) (string, error) {
 	folders := strings.Split(folderPath, "/")
 	currentFolderID := rootFolderID
@@ -76,8 +111,12 @@ func findOrCreateFolderByPath(srv *drive.Service, rootFolderID, folderPath strin
 	return currentFolderID, nil
 }
 
-// Функция для загрузки или обновления файла в указанной папке на Google Drive
-// Функция для загрузки или обновления файла в указанной папке на Google Drive
+// Function to download or update a file in a specified folder on Google Drive
+// @param srv: Google Drive service instance
+// @param folderID: ID of the target folder on Google Drive
+// @param filePath: Path to the file to upload
+// @param driveFile: File metadata from Google Drive (nil if file does not exist)
+// @return: Error if any
 func uploadFile(srv *drive.Service, folderID, filePath string, driveFile *drive.File) error {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -116,6 +155,14 @@ func uploadFile(srv *drive.Service, folderID, filePath string, driveFile *drive.
 	return nil
 }
 
+// Function to synchronize a local folder with a folder on Google Drive
+// @param srv: Google Drive service instance
+// @param localDir: Path to the local folder to sync
+// @param remoteFolderID: ID of the target folder on Google Drive
+// @param direction: Sync direction: "to_drive" or "from_drive"
+// @param fileMask: File mask to filter files for syncing
+// @param mkdir: Create missing folders if true
+// @return: Error if any
 func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMask string, mkdir bool) error {
 	localFilesMap := make(map[string]string)
 	driveFilesMap, err := getAllFilesFromDrive(srv, remoteFolderID, "")
@@ -182,10 +229,10 @@ func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMas
 		return nil
 	})
 
-	// Вывод отладочной информации о локальных файлах и их хэшах
-	fmt.Println("Local files:")
+	// Output debug information about local files and their hashes
+	debugPrintln("Local files:")
 	for path, hash := range localFilesMap {
-		fmt.Printf("  %s: %s\n", path, hash)
+		debugPrintf("  %s: %s\n", path, hash)
 	}
 
 	if err != nil {
@@ -291,25 +338,42 @@ func getAllFilesFromDrive(srv *drive.Service, folderID, currentPath string) (map
 		pageToken = r.NextPageToken
 	}
 
-	// Вывод отладочной информации
-	fmt.Println("Files on Google Drive:")
+	// debug information
+	debugPrintln("Files on Google Drive:")
 	for name, file := range filesMap {
-		fmt.Printf("  %s: %s\n", name, file.Md5Checksum)
+		debugPrintf("  %s: %s\n", name, file.Md5Checksum)
 	}
 
 	return filesMap, nil
 }
+
+func debugPrintln(args ...interface{}) {
+	if debug {
+		fmt.Println(args...)
+	}
+}
+
+func debugPrintf(format string, args ...interface{}) {
+	if debug {
+		fmt.Printf(format, args...)
+	}
+}
+
 func main() {
-	credPath := flag.String("c", filepath.Join(os.Getenv("HOME"), ".backup_uploader", "google", "credentials.json"), "Path to credentials.json file")
-	driveId := flag.String("drive_id", "", "Google Drive ID (for Shared Drives)")
-	syncFolderPath := flag.String("sync_folder", "", "Path to the local folder to sync")
-	targetFolderPath := flag.String("folder_path", "", "Path to the target folder on Google Drive")
-	fileMask := flag.String("file_mask", "*", "File mask to filter files for syncing")
-	mkdir := flag.Bool("mkdir", false, "Create directories if they do not exist")
-	direction := flag.String("direction", "to_drive", "Sync direction: to_drive (default) or from_drive")
+	flag.Parse()
+	if debug {
+		fmt.Println("Debug mode enabled")
+	}
+	//credPath := flag.String("c", filepath.Join(os.Getenv("HOME"), ".backup_uploader", "google", "credentials.json"), "Path to credentials.json file")
+	//driveId := flag.String("drive_id", "", "Google Drive ID (for Shared Drives)")
+	//syncFolderPath := flag.String("sync_folder", "", "Path to the local folder to sync")
+	//targetFolderPath := flag.String("folder_path", "", "Path to the target folder on Google Drive")
+	//fileMask := flag.String("file_mask", "*", "File mask to filter files for syncing")
+	//mkdir := flag.Bool("mkdir", false, "Create directories if they do not exist")
+	//direction := flag.String("direction", "to_drive", "Sync direction: to_drive (default) or from_drive")
 	flag.Parse()
 
-	b, err := ioutil.ReadFile(*credPath)
+	b, err := ioutil.ReadFile(credPath)
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
@@ -327,17 +391,17 @@ func main() {
 		log.Fatalf("Unable to retrieve Drive client: %v", err)
 	}
 
-	if *syncFolderPath != "" && *targetFolderPath != "" {
+	if syncFolderPath != "" && targetFolderPath != "" {
 		rootFolderID := "root"
-		if *driveId != "" {
-			rootFolderID = *driveId // Используем driveId как корень, если он указан
+		if driveId != "" {
+			rootFolderID = driveId // Используем driveId как корень, если он указан
 		}
 
-		folderID, err := findOrCreateFolderByPath(srv, rootFolderID, *targetFolderPath, *mkdir)
+		folderID, err := findOrCreateFolderByPath(srv, rootFolderID, targetFolderPath, mkdir)
 		if err != nil {
 			log.Fatalf("Error finding or creating target folder: %v", err)
 		}
-		err = syncFolder(srv, *syncFolderPath, folderID, *direction, *fileMask, *mkdir)
+		err = syncFolder(srv, syncFolderPath, folderID, direction, fileMask, mkdir)
 		if err != nil {
 			log.Fatalf("Error syncing folder: %v", err)
 		}
