@@ -20,7 +20,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          persist-credentials: true  # Required to push back to the repo
+          persist-credentials: false  # No need to push back to the repo
           fetch-depth: 0  # Fetch all history for all tags and branches
 
       - name: Set up Go
@@ -39,11 +39,11 @@ jobs:
       - name: Move binary to distr directory
         run: mv backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }} ./distr/
 
-      - name: Configure Git for push
+      - name: Configure Git for push with CI_TOKEN
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git remote set-url origin https://${{ github.actor }}:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.CI_TOKEN }}@github.com/${{ github.repository }}.git
 
       - name: Commit binaries to distr directory
         run: |
@@ -66,6 +66,7 @@ jobs:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
