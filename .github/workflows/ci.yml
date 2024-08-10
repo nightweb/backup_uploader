@@ -89,19 +89,19 @@ jobs:
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: v0.1.0
+          release_name: Release v0.1.0
           body: |
-            Release of version ${{ github.ref }}.
+            Release of version v0.1.0.
             - Linux: `backup_uploader_linux_amd64`
             - macOS (Intel): `backup_uploader_darwin_amd64`
             - macOS (Apple Silicon): `backup_uploader_darwin_arm64`
             - Windows: `backup_uploader_windows_amd64`
           draft: true
           prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
