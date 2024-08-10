@@ -20,7 +20,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          persist-credentials: false  # Required to push back to the repo
+          persist-credentials: true  # Required to push back to the repo
           fetch-depth: 0  # Fetch all history for all tags and branches
 
       - name: Set up Go
@@ -39,18 +39,14 @@ jobs:
       - name: Move binary to distr directory
         run: mv backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }} ./distr/
 
-      - name: Checkout code with token
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: true  # Allow pushing back
-          fetch-depth: 0
-
-      - name: Commit binaries to distr directory
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure Git for push
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+      - name: Commit binaries to distr directory
+        run: |
           git add distr/
           git commit -m "Add binaries for ${{ matrix.goos }}/{{ matrix.goarch }} version $VERSION"
           git push origin HEAD:${{ github.ref }}
@@ -100,5 +96,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./distr/backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          asset_name: backup_uploader_${{ matrix.goos }}_${{ matrix.goos }}.zip
+          asset_name: backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           asset_content_type: application/zip
