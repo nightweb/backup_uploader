@@ -19,15 +19,15 @@ import (
 )
 
 var (
-	debug            bool
-	syncFolderPath   string
-	credPath         string
-	folderPath       string
-	driveId          string
-	direction        string
-	fileMask         string
-	mkdir            bool
-	targetFolderPath string
+	debug          bool
+	syncFolderPath string
+	credPath       string
+	driveId        string
+	direction      string
+	fileMask       string
+	mkdir          bool
+	folderPath     string
+	uploadFilePath string
 )
 
 func init() {
@@ -42,7 +42,8 @@ func init() {
 	flag.StringVar(&direction, "direction", "to_drive", "Sync direction: to_drive (default) or from_drive")
 	flag.StringVar(&fileMask, "file_mask", "*", "File mask to filter files for syncing")
 	flag.BoolVar(&mkdir, "mkdir", false, "Create directories if they do not exist")
-	flag.StringVar(&targetFolderPath, "folder_path", "", "Path to the target folder on Google Drive")
+	flag.StringVar(&folderPath, "folder_path", "", "Path to the target folder on Google Drive")
+	flag.StringVar(&uploadFilePath, "upload_file", "", "Path to a single file to upload to Google Drive")
 }
 
 // Returns the MD5 hash of a file
@@ -359,19 +360,61 @@ func debugPrintf(format string, args ...interface{}) {
 	}
 }
 
+func syncSingleFile(srv *drive.Service, localFilePath, remoteFolderID, fileMask string, mkdir bool) error {
+	fileInfo, err := os.Stat(localFilePath)
+	if err != nil {
+		return fmt.Errorf("unable to get file info: %v", err)
+	}
+
+	if fileInfo.IsDir() {
+		return fmt.Errorf("provided path is a directory, expected a file")
+	}
+
+	localHash, err := computeMD5(localFilePath)
+	if err != nil {
+		return fmt.Errorf("unable to compute hash for file '%s': %v", localFilePath, err)
+	}
+
+	relativePath := fileInfo.Name()
+	driveFilesMap, err := getAllFilesFromDrive(srv, remoteFolderID, "")
+	if err != nil {
+		return fmt.Errorf("unable to get files from Google Drive: %v", err)
+	}
+
+	driveFile, exists := driveFilesMap[relativePath]
+	if exists {
+		if driveFile.Md5Checksum == localHash {
+			fmt.Printf("File '%s' is up-to-date on Google Drive. Skipping upload.\n", relativePath)
+			return nil // Файл не изменился, пропускаем его
+		} else {
+			fmt.Printf("File '%s' has changed. Updating on Google Drive...\n", relativePath)
+			err = uploadFile(srv, remoteFolderID, localFilePath, driveFile)
+			if err != nil {
+				return fmt.Errorf("unable to update file '%s': %v", localFilePath, err)
+			}
+		}
+	} else {
+		// Если файл отсутствует на Google Drive, загружаем его
+		fmt.Printf("File '%s' does not exist on Google Drive. Uploading...\n", relativePath)
+		err = uploadFile(srv, remoteFolderID, localFilePath, nil)
+		if err != nil {
+			return fmt.Errorf("unable to upload file '%s': %v", localFilePath, err)
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	flag.Parse()
 	if debug {
 		fmt.Println("Debug mode enabled")
 	}
-	//credPath := flag.String("c", filepath.Join(os.Getenv("HOME"), ".backup_uploader", "google", "credentials.json"), "Path to credentials.json file")
-	//driveId := flag.String("drive_id", "", "Google Drive ID (for Shared Drives)")
-	//syncFolderPath := flag.String("sync_folder", "", "Path to the local folder to sync")
-	//targetFolderPath := flag.String("folder_path", "", "Path to the target folder on Google Drive")
-	//fileMask := flag.String("file_mask", "*", "File mask to filter files for syncing")
-	//mkdir := flag.Bool("mkdir", false, "Create directories if they do not exist")
-	//direction := flag.String("direction", "to_drive", "Sync direction: to_drive (default) or from_drive")
 	flag.Parse()
+
+	if uploadFilePath == "" && (syncFolderPath == "" || folderPath == "") {
+		log.Fatal("Both -sync_folder and -folder_path must be specified, unless using -upload_file.")
+	}
 
 	b, err := ioutil.ReadFile(credPath)
 	if err != nil {
@@ -391,22 +434,37 @@ func main() {
 		log.Fatalf("Unable to retrieve Drive client: %v", err)
 	}
 
-	if syncFolderPath != "" && targetFolderPath != "" {
-		rootFolderID := "root"
-		if driveId != "" {
-			rootFolderID = driveId // Используем driveId как корень, если он указан
+	rootFolderID := "root"
+	if driveId != "" {
+		rootFolderID = driveId // Используем driveId как корень, если он указан
+	}
+
+	// Only one file upload is supported
+	if uploadFilePath != "" {
+		fmt.Printf("Uploading file: %s to Google Drive folder: %s\n", uploadFilePath, folderPath)
+
+		folderID, err := findOrCreateFolderByPath(srv, rootFolderID, folderPath, mkdir)
+		if err != nil {
+			log.Fatalf("Failed to create or find folder: %v", err)
 		}
 
-		folderID, err := findOrCreateFolderByPath(srv, rootFolderID, targetFolderPath, mkdir)
+		err = syncSingleFile(srv, uploadFilePath, folderID, fileMask, mkdir)
+		if err != nil {
+			log.Fatalf("Failed to upload file: %v", err)
+		}
+	} else if syncFolderPath != "" && folderPath != "" {
+		fmt.Printf("Syncing folder: %s to Google Drive folder: %s\n", syncFolderPath, folderPath)
+
+		folderID, err := findOrCreateFolderByPath(srv, rootFolderID, folderPath, mkdir)
 		if err != nil {
 			log.Fatalf("Error finding or creating target folder: %v", err)
 		}
+
 		err = syncFolder(srv, syncFolderPath, folderID, direction, fileMask, mkdir)
 		if err != nil {
 			log.Fatalf("Error syncing folder: %v", err)
 		}
-		return
+	} else {
+		log.Fatal("No operation specified. Use -sync_folder to sync a local folder with Google Drive or -upload_file to upload a single file.")
 	}
-
-	log.Fatal("No operation specified. Use -sync_folder to sync a local folder with Google Drive.")
 }
