@@ -1,139 +1,83 @@
+
 # Backup Uploader
 
-Backup Uploader is a command-line tool for uploading files to Google Drive, with support for creating directories if they don't exist.
+## Description
+
+`backup_uploader` is a tool for synchronizing files between a local directory and Google Drive. It allows you to upload and update files on Google Drive while ensuring that files are compared using hash values to avoid duplication and reduce unnecessary traffic.
 
 ## Features
 
-- Upload files to a specified directory on Google Drive or Shared Drives.
-- Automatically create directories along the path if they don't exist using the `-mkdir` option.
-- List files and folders in Google Drive or Shared Drives.
-
-## Requirements
-
-- Go 1.16 or higher
-- Google Drive API credentials
+- Synchronize a local directory with Google Drive (`to_drive`).
+- Synchronize Google Drive with a local directory (`from_drive`).
+- Automatically create missing folders on Google Drive when uploading.
+- Compare files based on MD5 hash values.
+- Update only files that have been modified.
+- Support for debug mode with detailed output (`-vv` or `--debug`).
+- Upload a single file directly to Google Drive with the `-upload_file` flag.
 
 ## Installation
 
-1. Clone the repository:
-
+1. Install Go (https://golang.org/doc/install).
+2. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/backup-uploader.git
-   cd backup-uploader
+   git clone https://github.com/yourusername/backup_uploader.git
+   cd backup_uploader
    ```
 
-2. Build the binary:
-
+3. Build the executable:
    ```sh
    go build -o backup_uploader
    ```
 
-3. Obtain Google Drive API credentials and save them as `credentials.json`:
-
-   - Go to [Google Cloud Console](https://console.cloud.google.com/).
-   - Create a new project or use an existing one.
-   - Enable the Google Drive API for your project.
-   - Create credentials for a service account and download the `credentials.json` file.
-
-## Building for Different Platforms
-
-You can build the `backup_uploader` binary for different operating systems and architectures using the following commands:
-
-### For Linux (64-bit)
-
-```sh
-GOOS=linux GOARCH=amd64 go build -o backup_uploader_linux
-```
-
-### For Windows (64-bit)
-
-```sh
-GOOS=windows GOARCH=amd64 go build -o backup_uploader.exe
-```
-
-### For macOS (64-bit)
-
-```sh
-GOOS=darwin GOARCH=amd64 go build -o backup_uploader_mac
-```
-
-### For ARM (e.g., Raspberry Pi)
-
-```sh
-GOOS=linux GOARCH=arm go build -o backup_uploader_arm
-```
-
-These commands will generate binaries for the specified platforms, which you can then distribute and run on the respective systems.
-
 ## Usage
 
-### Upload a File
+### Main Flags
 
-Upload a file to a specific folder path within Google Drive or a Shared Drive:
+- `-c` : Path to the `credentials.json` file for Google API (default: `~/.backup_uploader/google/credentials.json`).
+- `-sync_folder` : Path to the local directory to sync.
+- `-folder_path` : Path to the target folder on Google Drive.
+- `-drive_id` : Google Drive ID (for Shared Drives, optional).
+- `-file_mask` : File mask to filter files for syncing (e.g., `*.txt`).
+- `-mkdir` : Flag to create directories on Google Drive if they do not exist.
+- `-direction` : Sync direction (`to_drive` or `from_drive`).
+- `-vv`, `--debug` : Enable verbose output (debug mode).
+- `-upload_file` : Path to a single file to upload to Google Drive.
+
+### Examples
+
+1. **Synchronize a local directory with Google Drive**:
+
+   ```sh
+   ./backup_uploader -c path/to/credentials.json -sync_folder /path/to/local/folder -folder_path "TargetFolder" -drive_id YOUR_DRIVE_ID -mkdir -direction to_drive -file_mask '*.txt' -vv
+   ```
+
+2. **Synchronize Google Drive with a local directory**:
+
+   ```sh
+   ./backup_uploader -c path/to/credentials.json -sync_folder /path/to/local/folder -folder_path "TargetFolder" -drive_id YOUR_DRIVE_ID -mkdir -direction from_drive -file_mask '*.txt' -vv
+   ```
+
+3. **Upload a single file to Google Drive**:
+
+   ```sh
+   ./backup_uploader -c path/to/credentials.json -upload_file /path/to/file.txt -folder_path "TargetFolder" -vv
+   ```
+
+### Debugging
+
+When running the script with the `-vv` or `--debug` flag, detailed debugging information is output, including:
+
+- A list of files and their hashes on Google Drive.
+- A list of local files and their hashes.
+- Messages about which files were updated, skipped, or uploaded.
+
+### Testing
+
+To test the script's functionality, you can use the following command:
 
 ```sh
-./backup_uploader -c path/to/credentials.json -upload_file /path/to/local/file.txt -folder_path "TargetFolder/SubFolder" -drive_id YOUR_DRIVE_ID
+go test -v
 ```
-
-### Create Directories Automatically
-
-Use the `-mkdir` option to automatically create directories if they don't exist:
-
-```sh
-./backup_uploader -c path/to/credentials.json -upload_file /path/to/local/file.txt -folder_path "TargetFolder/SubFolder" -drive_id YOUR_DRIVE_ID -mkdir
-```
-
-### List Files and Folders
-
-List all files and folders in Google Drive or a Shared Drive:
-
-```sh
-./backup_uploader -c path/to/credentials.json -drive_id YOUR_DRIVE_ID -list
-```
-
-## Testing
-
-To run tests for the Backup Uploader, follow these steps:
-
-1. Make sure you have your `credentials.json` file set up as described above.
-
-2. Set up the necessary environment variables or paths in the test file `backup_uploader_test.go`.
-
-3. Run the tests using the `go test` command:
-
-   ```sh
-   go test
-   ```
-
-   This will execute the test cases defined in `backup_uploader_test.go` and help ensure the functionality of the Backup Uploader.
-
-## Contributing
-
-If you'd like to contribute to this project, follow these steps:
-
-1. Fork the repository.
-
-2. Create a new branch for your feature or bugfix:
-
-   ```sh
-   git checkout -b feature-name
-   ```
-
-3. Make your changes and commit them:
-
-   ```sh
-   git commit -m "Description of the feature or fix"
-   ```
-
-4. Push your changes to your fork:
-
-   ```sh
-   git push origin feature-name
-   ```
-
-5. Create a Pull Request from your fork's branch to the `main` branch of this repository.
-
-6. Ensure your code passes all tests before submitting your PR.
 
 ## License
 

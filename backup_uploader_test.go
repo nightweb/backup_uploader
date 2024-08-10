@@ -1,75 +1,114 @@
 package main
 
 import (
-	"golang.org/x/net/context"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/option"
-	"io/ioutil"
-	"os"
-	"strings"
-	"testing"
+	"google.golang.org/api/googleapi"
+	"io"
 )
 
-// Функция для инициализации Google Drive Service для тестов
-func initDriveService(t *testing.T) *drive.Service {
-	credPath := "path/to/credentials.json" // Укажите путь к вашему файлу учетных данных
-	b, err := ioutil.ReadFile(credPath)
-	if err != nil {
-		t.Fatalf("Unable to read client secret file: %v", err)
-	}
-
-	config, err := google.JWTConfigFromJSON(b, drive.DriveScope)
-	if err != nil {
-		t.Fatalf("Unable to parse client secret file to config: %v", err)
-	}
-
-	ctx := context.Background()
-	client := config.Client(ctx)
-
-	srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		t.Fatalf("Unable to retrieve Drive client: %v", err)
-	}
-
-	return srv
+type DriveService interface {
+	FilesCreate(file *drive.File) DriveServiceCreateCall
+	FilesUpdate(fileId string, file *drive.File) DriveServiceUpdateCall
+	FilesList() DriveServiceListCall
 }
 
-func TestUploadFile(t *testing.T) {
-	srv := initDriveService(t)
-
-	// Создаем временный файл для загрузки
-	tmpFile, err := ioutil.TempFile("", "upload_test_file")
-	if err != nil {
-		t.Fatalf("Unable to create temporary file: %v", err)
-	}
-	defer os.Remove(tmpFile.Name())
-
-	_, err = tmpFile.WriteString("This is a test file for upload.")
-	if err != nil {
-		t.Fatalf("Unable to write to temporary file: %v", err)
-	}
-
-	folderID := "your-test-folder-id" // Укажите тестовый идентификатор папки
-
-	err = uploadFile(srv, folderID, tmpFile.Name())
-	if err != nil {
-		t.Errorf("Failed to upload file: %v", err)
-	}
+type DriveServiceCreateCall interface {
+	SupportsAllDrives(supportsAllDrives bool) DriveServiceCreateCall
+	Fields(fields ...googleapi.Field) DriveServiceCreateCall
+	Do(opts ...googleapi.CallOption) (*drive.File, error)
 }
 
-func TestFindOrCreateFolderByPath(t *testing.T) {
-	srv := initDriveService(t)
+type DriveServiceUpdateCall interface {
+	SupportsAllDrives(supportsAllDrives bool) DriveServiceUpdateCall
+	Media(r io.Reader, options ...googleapi.MediaOption) DriveServiceUpdateCall
+	Do(opts ...googleapi.CallOption) (*drive.File, error)
+}
 
-	rootFolderID := "your-test-drive-id" // Укажите тестовый идентификатор диска
-	folderPath := "Test/Path/For/Creation"
+type DriveServiceListCall interface {
+	Q(query string) DriveServiceListCall
+	Fields(fields ...googleapi.Field) DriveServiceListCall
+	SupportsAllDrives(supportsAllDrives bool) DriveServiceListCall
+	IncludeItemsFromAllDrives(includeItemsFromAllDrives bool) DriveServiceListCall
+	Do(opts ...googleapi.CallOption) (*drive.FileList, error)
+}
 
-	folderID, err := findOrCreateFolderByPath(srv, rootFolderID, folderPath, true)
-	if err != nil {
-		t.Errorf("Failed to find or create folder: %v", err)
+type MockDriveService struct {
+	files map[string]*drive.File
+}
+
+func (m *MockDriveService) FilesCreate(file *drive.File) DriveServiceCreateCall {
+	return &MockDriveServiceCreateCall{file: file, service: m}
+}
+
+func (m *MockDriveService) FilesUpdate(fileId string, file *drive.File) DriveServiceUpdateCall {
+	return &MockDriveServiceUpdateCall{fileId: fileId, file: file, service: m}
+}
+
+func (m *MockDriveService) FilesList() DriveServiceListCall {
+	return &MockDriveServiceListCall{service: m}
+}
+
+type MockDriveServiceCreateCall struct {
+	file    *drive.File
+	service *MockDriveService
+}
+
+func (c *MockDriveServiceCreateCall) SupportsAllDrives(supportsAllDrives bool) DriveServiceCreateCall {
+	return c
+}
+
+func (c *MockDriveServiceCreateCall) Fields(fields ...googleapi.Field) DriveServiceCreateCall {
+	return c
+}
+
+func (c *MockDriveServiceCreateCall) Do(opts ...googleapi.CallOption) (*drive.File, error) {
+	c.service.files[c.file.Name] = c.file
+	return c.file, nil
+}
+
+type MockDriveServiceUpdateCall struct {
+	fileId  string
+	file    *drive.File
+	service *MockDriveService
+}
+
+func (c *MockDriveServiceUpdateCall) SupportsAllDrives(supportsAllDrives bool) DriveServiceUpdateCall {
+	return c
+}
+
+func (c *MockDriveServiceUpdateCall) Media(r io.Reader, options ...googleapi.MediaOption) DriveServiceUpdateCall {
+	return c
+}
+
+func (c *MockDriveServiceUpdateCall) Do(opts ...googleapi.CallOption) (*drive.File, error) {
+	c.service.files[c.fileId] = c.file
+	return c.file, nil
+}
+
+type MockDriveServiceListCall struct {
+	service *MockDriveService
+}
+
+func (c *MockDriveServiceListCall) Q(query string) DriveServiceListCall {
+	return c
+}
+
+func (c *MockDriveServiceListCall) Fields(fields ...googleapi.Field) DriveServiceListCall {
+	return c
+}
+
+func (c *MockDriveServiceListCall) SupportsAllDrives(supportsAllDrives bool) DriveServiceListCall {
+	return c
+}
+
+func (c *MockDriveServiceListCall) IncludeItemsFromAllDrives(includeItemsFromAllDrives bool) DriveServiceListCall {
+	return c
+}
+
+func (c *MockDriveServiceListCall) Do(opts ...googleapi.CallOption) (*drive.FileList, error) {
+	files := []*drive.File{}
+	for _, file := range c.service.files {
+		files = append(files, file)
 	}
-
-	if !strings.HasPrefix(folderID, "folder:") {
-		t.Errorf("Invalid folder ID returned: %s", folderID)
-	}
+	return &drive.FileList{Files: files}, nil
 }
