@@ -1,112 +1,42 @@
-name: Build and Release
+name: Upload All Artifacts to Existing Release
 
 on:
   push:
     tags:
-      - 'v*'  # Triggers on version tags, e.g., v1.0.0
+      - 'v*'  # Запускается при пуше тега, соответствующего версии, например, v1.0.0
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build and Release Binaries
+  upload:
+    name: Upload All Artifacts to Existing Release
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        goos: [linux, windows, darwin]
-        goarch: [amd64, arm64]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          persist-credentials: false  # No need to push back to the repo
-          fetch-depth: 0  # Fetch all history for all tags and branches
 
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.22.5'  # Specify Go version
+          go-version: '1.22.5'
 
-      - name: Build binary
+      - name: Build binaries
         run: |
           VERSION=$(echo ${GITHUB_REF#refs/tags/})
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-X main.version=$VERSION" -o backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}
+          GOOS=linux GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_linux_amd64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_darwin_amd64
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_darwin_arm64
+          GOOS=windows GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_windows_amd64
 
-      - name: Create distr directory
-        run: mkdir -p distr
-
-      - name: Move binary to distr directory
-        run: mv backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }} ./distr/
-
-      - name: Configure Git for push with CI_TOKEN
+      - name: Create distr directory and move binaries
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git remote set-url origin https://${{ github.actor }}:${{ secrets.CI_TOKEN }}@github.com/${{ github.repository }}.git
+          mkdir -p distr
+          mv backup_uploader_* ./distr/
 
-      - name: Commit binaries to distr directory
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
-        run: |
-          git add distr/
-          git commit -m "Add binaries for ${{ matrix.goos }}/{{ matrix.goarch }} version $VERSION"
-          for i in {1..5}; do
-            git -c http.extraheader="AUTHORIZATION: Basic $(echo -n x-access-token:${{ secrets.CI_TOKEN }} | base64)" push origin HEAD:${{ github.ref }} && break
-            echo "Retrying git push..."
-            sleep 5
-          done
-
-      - name: Archive binary
-        run: |
-          zip ./distr/backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip ./distr/backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}
-        shell: bash
-
-      - name: Upload binary as artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}
-          path: ./distr/backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-
-  release:
-    name: Create GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v2
-        with:
-          path: ./distr/
-
-#      - name: Download binaries
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}
-
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}  # Используйте PAT с правами "repo"
-        with:
-          tag_name: v0.1.0
-          release_name: Release v0.1.0
-          body: |
-            Release of version v0.1.0.
-            - Linux: `backup_uploader_linux_amd64`
-            - macOS (Intel): `backup_uploader_darwin_amd64`
-            - macOS (Apple Silicon): `backup_uploader_darwin_arm64`
-            - Windows: `backup_uploader_windows_amd64`
-          draft: true
-          prerelease: true
-
-      - name: Upload Release Assets
+      - name: Upload all artifacts to existing release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./distr/backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          asset_name: backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          asset_content_type: application/zip
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./distr/*   # Загружаем все файлы в папке distr
+          asset_name: ''
+          asset_content_type: application/octet-stream
