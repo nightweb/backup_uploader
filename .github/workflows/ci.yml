@@ -60,8 +60,7 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git checkout main
-          git pull origin main
+          git checkout ${{ github.ref }}
           git checkout -b release-${{ github.ref }}
           git add .
           git commit -m "Update after uploading artifacts for version ${{ github.ref }}"
