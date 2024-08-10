@@ -23,18 +23,22 @@ jobs:
       - name: Build binaries
         run: |
           VERSION=$(echo ${GITHUB_REF#refs/tags/})
+          GOOS=linux GOARCH=arm go build -ldflags="-X main.version=$VERSION" -o backup_uploader_linux_arm
+          GOOS=linux GOARCH=arm64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_linux_arm64
           GOOS=linux GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_linux_amd64
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_darwin_amd64
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_darwin_arm64
-          GOOS=windows GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_windows_amd64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_osx_x64
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_osx_apple_silicone
+          GOOS=windows GOARCH=amd64 go build -ldflags="-X main.version=$VERSION" -o backup_uploader_windows_x64.exe
 
       - name: Create distr directory and move binaries
         run: |
           mkdir -p distr
+          mv backup_uploader_linux_arm ./distr/
+          mv backup_uploader_linux_arm64 ./distr/
           mv backup_uploader_linux_amd64 ./distr/
-          mv backup_uploader_darwin_amd64 ./distr/
-          mv backup_uploader_darwin_arm64 ./distr/
-          mv backup_uploader_windows_amd64 ./distr/
+          mv backup_uploader_osx_x64 ./distr/
+          mv backup_uploader_osx_apple_silicone ./distr/
+          mv backup_uploader_windows_x64.exe ./distr/
 
       - name: Get the upload URL for the release
         id: get_release
