@@ -39,6 +39,12 @@ jobs:
       - name: Move binary to distr directory
         run: mv backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }} ./distr/
 
+      - name: Checkout code with token
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: true  # Allow pushing back
+          fetch-depth: 0
+
       - name: Commit binaries to distr directory
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,5 +100,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./distr/backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          asset_name: backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          asset_name: backup_uploader_${{ matrix.goos }}_${{ matrix.goos }}.zip
           asset_content_type: application/zip
