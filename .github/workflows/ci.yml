@@ -33,10 +33,22 @@ jobs:
           mkdir -p distr
           mv backup_uploader_* ./distr/
 
+      - name: Get the release information
+        id: get_release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: context.ref.replace('refs/tags/', ''),
+            });
+            core.setOutput('upload_url', release.upload_url);
+
       - name: Upload all artifacts to existing release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./distr/*   # Загружаем все файлы в папке distr
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./distr/*
           asset_name: ''
           asset_content_type: application/octet-stream
