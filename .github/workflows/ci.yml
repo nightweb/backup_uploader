@@ -33,6 +33,18 @@ jobs:
           mkdir -p distr
           mv backup_uploader_* ./distr/
 
+      - name: Get the upload URL for the release
+        id: get_release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: context.ref.replace('refs/tags/', ''),
+            });
+            core.setOutput('upload_url', release.upload_url.replace('{?name,label}', ''));
+
       - name: Upload each artifact separately
         run: |
           for file in ./distr/*; do
@@ -42,5 +54,5 @@ jobs:
               -H "Authorization: token ${{ secrets.CI_TOKEN }}" \
               -H "Content-Type: application/octet-stream" \
               --data-binary @"$file" \
-              "${{ secrets.UPLOAD_URL }}?name=$name"
+              "${{ steps.get_release.outputs.upload_url }}?name=$name"
           done
