@@ -1,9 +1,11 @@
 name: Build and Release
 
 on:
-#  push:
-#    tags:
-#      - 'v*'  # Triggers on version tags, e.g., v1.0.0
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags, e.g., v1.0.0
+    only:
+      - main  # Only run on the main branch
   workflow_dispatch:
 
 jobs:
@@ -100,8 +102,8 @@ jobs:
             - macOS (Intel): `backup_uploader_darwin_amd64`
             - macOS (Apple Silicon): `backup_uploader_darwin_arm64`
             - Windows: `backup_uploader_windows_amd64`
-          draft: false
-          prerelease: false
+          draft: true
+          prerelease: true
 
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
