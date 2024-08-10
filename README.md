@@ -71,6 +71,42 @@ When running the script with the `-vv` or `--debug` flag, detailed debugging inf
 - A list of local files and their hashes.
 - Messages about which files were updated, skipped, or uploaded.
 
+### Building for Different Platforms
+
+To build the executable for different platforms, you can use the following commands:
+
+- **Linux**:
+  ```sh
+  GOOS=linux GOARCH=amd64 go build -o backup_uploader_linux
+  ```
+
+- **Windows**:
+  ```sh
+  GOOS=windows GOARCH=amd64 go build -o backup_uploader_windows.exe
+  ```
+
+- **macOS (Intel)**:
+  ```sh
+  GOOS=darwin GOARCH=amd64 go build -o backup_uploader_mac
+  ```
+
+- **macOS (Apple Silicon)**:
+  ```sh
+  GOOS=darwin GOARCH=arm64 go build -o backup_uploader_mac_arm64
+  ```
+
+### Contributing
+
+If you would like to contribute to this project, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Commit your changes (`git commit -m 'Add new feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Open a Pull Request.
+
+Please make sure to update tests as appropriate and follow the code style guidelines.
+
 ### Testing
 
 To test the script's functionality, you can use the following command:
