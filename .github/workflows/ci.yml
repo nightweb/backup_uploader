@@ -31,7 +31,10 @@ jobs:
       - name: Create distr directory and move binaries
         run: |
           mkdir -p distr
-          mv backup_uploader_* ./distr/
+          mv backup_uploader_linux_amd64 ./distr/
+          mv backup_uploader_darwin_amd64 ./distr/
+          mv backup_uploader_darwin_arm64 ./distr/
+          mv backup_uploader_windows_amd64 ./distr/
 
       - name: Get the upload URL for the release
         id: get_release
@@ -48,10 +51,6 @@ jobs:
       - name: Upload each artifact separately
         run: |
           for file in ./distr/*; do
-            if [[ "$file" == *.go ]]; then
-              echo "Skipping $file..."
-              continue
-            fi
             name=$(basename "$file")
             echo "Uploading $name..."
             curl -X POST \
