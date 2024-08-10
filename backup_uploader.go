@@ -89,7 +89,7 @@ func findOrCreateFolderByPath(srv *drive.Service, rootFolderID, folderPath strin
 
 		if len(r.Files) == 0 {
 			if mkdir {
-				// Создаем папку, если не найдена
+				// Create a new folder if it does not exist
 				newFolder := &drive.File{
 					Name:     folder,
 					Parents:  []string{currentFolderID},
@@ -131,16 +131,16 @@ func uploadFile(srv *drive.Service, folderID, filePath string, driveFile *drive.
 	}
 
 	if driveFile != nil {
-		// Если файл уже существует на Google Drive, обновляем его содержимое
+		// If the file exists on Google Drive, update only the file content
 		fmt.Printf("Updating file '%s' on Google Drive...\n", fileInfo.Name())
-		// Обновляем только содержимое файла, без изменения других полей
+		// Update only the file content without changing other fields
 		updatedFile, err := srv.Files.Update(driveFile.Id, &drive.File{}).Media(file).SupportsAllDrives(true).Do()
 		if err != nil {
 			return fmt.Errorf("unable to update file: %v", err)
 		}
 		fmt.Printf("File '%s' successfully updated. File ID: %s\n", updatedFile.Name, updatedFile.Id)
 	} else {
-		// Если файл не существует на Google Drive, создаем его
+		// If the file does not exist on Google Drive, create it
 		fmt.Printf("Uploading new file '%s' to Google Drive...\n", fileInfo.Name())
 		driveFile := &drive.File{
 			Name:    fileInfo.Name(),
@@ -171,7 +171,7 @@ func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMas
 		return fmt.Errorf("unable to get files from Google Drive: %v", err)
 	}
 
-	// Обход всех файлов в локальной директории
+	// Check all files in the local directory
 	err = filepath.Walk(localDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -181,7 +181,7 @@ func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMas
 			relativePath := strings.TrimPrefix(path, localDir)
 			relativePath = strings.TrimPrefix(relativePath, string(filepath.Separator))
 
-			// Проверка на соответствие маске файла
+			// Check if the file matches the file mask
 			if fileMask != "" && !matchesFileMask(info.Name(), fileMask) {
 				return nil
 			}
@@ -191,10 +191,10 @@ func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMas
 				return fmt.Errorf("unable to compute hash for file '%s': %v", path, err)
 			}
 
-			// Сохраняем хэш локального файла в localFilesMap
+			// Save the hash of the local file in localFilesMap
 			localFilesMap[relativePath] = localHash
 
-			// Сравнение полного относительного пути
+			// Check if the file exists on Google Drive
 			driveFile, exists := driveFilesMap[relativePath]
 			if exists {
 				if driveFile.Md5Checksum == localHash {
@@ -208,7 +208,7 @@ func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMas
 					}
 				}
 			} else {
-				// Если файл отсутствует на Google Drive, загружаем его
+				// If the file is missing on Google Drive, upload it
 				fmt.Printf("File '%s' does not exist on Google Drive. Uploading...\n", relativePath)
 				remoteFileDir := filepath.Dir(relativePath)
 				folderID := remoteFolderID
@@ -240,7 +240,7 @@ func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMas
 		return err
 	}
 
-	// Проверка на файлы, которые есть на Google Drive, но нет локально (только если direction == "from_drive")
+	// Check for files that exist on Google Drive but not locally (only if direction == "from_drive")
 	if direction == "from_drive" {
 		for remoteFileName, driveFile := range driveFilesMap {
 			if _, exists := localFilesMap[remoteFileName]; !exists {
@@ -264,23 +264,27 @@ func syncFolder(srv *drive.Service, localDir, remoteFolderID, direction, fileMas
 	return nil
 }
 
-// Функция для загрузки файла с Google Drive на локальный диск
+// Function to download a file from Google Drive to the local disk
+// @param srv: Google Drive service instance
+// @param fileID: ID of the file on Google Drive
+// @param localPath: Path to save the file locally
+// @return: Error if any
 func downloadFile(srv *drive.Service, fileID, localPath string) error {
-	// Открываем файл на запись
+	// Open the file for writing
 	file, err := os.Create(localPath)
 	if err != nil {
 		return fmt.Errorf("unable to create local file '%s': %v", localPath, err)
 	}
 	defer file.Close()
 
-	// Загружаем содержимое файла с Google Drive
+	// Load the file content from Google Drive
 	res, err := srv.Files.Get(fileID).SupportsAllDrives(true).Download()
 	if err != nil {
 		return fmt.Errorf("unable to download file with ID '%s': %v", fileID, err)
 	}
 	defer res.Body.Close()
 
-	// Копируем содержимое файла в локальный файл
+	// Copy the file content to the local file
 	_, err = io.Copy(file, res.Body)
 	if err != nil {
 		return fmt.Errorf("unable to save file '%s': %v", localPath, err)
@@ -290,7 +294,10 @@ func downloadFile(srv *drive.Service, fileID, localPath string) error {
 	return nil
 }
 
-// Функция для фильтрации файлов по маске
+// Function to filter files by a mask
+// @param fileName: Name of the file
+// @param fileMask: File mask to filter files
+// @return: True if the file matches the mask, false otherwise
 func matchesFileMask(fileName, fileMask string) bool {
 	matched, err := filepath.Match(fileMask, fileName)
 	if err != nil {
@@ -299,6 +306,11 @@ func matchesFileMask(fileName, fileMask string) bool {
 	return matched
 }
 
+// Function to get all files from a specified folder on Google Drive
+// @param srv: Google Drive service instance
+// @param folderID: ID of the folder on Google Drive
+// @param currentPath: Current path in the folder structure
+// @return: Map of file paths to file metadata
 func getAllFilesFromDrive(srv *drive.Service, folderID, currentPath string) (map[string]*drive.File, error) {
 	filesMap := make(map[string]*drive.File)
 
@@ -320,7 +332,7 @@ func getAllFilesFromDrive(srv *drive.Service, folderID, currentPath string) (map
 		for _, file := range r.Files {
 			fullPath := filepath.Join(currentPath, file.Name)
 			if file.MimeType == "application/vnd.google-apps.folder" {
-				// Рекурсивно обходим поддиректории
+				// Recursively traverse subdirectories
 				subDirFiles, err := getAllFilesFromDrive(srv, file.Id, fullPath)
 				if err != nil {
 					return nil, err
@@ -348,18 +360,30 @@ func getAllFilesFromDrive(srv *drive.Service, folderID, currentPath string) (map
 	return filesMap, nil
 }
 
+// Debug print functions
+// @param args: Arguments to print
 func debugPrintln(args ...interface{}) {
 	if debug {
 		fmt.Println(args...)
 	}
 }
 
+// Debug printf function
+// @param format: Format string
+// @param args: Arguments to print
 func debugPrintf(format string, args ...interface{}) {
 	if debug {
 		fmt.Printf(format, args...)
 	}
 }
 
+// Function to synchronize a single file with Google Drive
+// @param srv: Google Drive service instance
+// @param localFilePath: Path to the file to sync
+// @param remoteFolderID: ID of the target folder on Google Drive
+// @param fileMask: File mask to filter files for syncing
+// @param mkdir: Create missing folders if true
+// @return: Error if any
 func syncSingleFile(srv *drive.Service, localFilePath, remoteFolderID, fileMask string, mkdir bool) error {
 	fileInfo, err := os.Stat(localFilePath)
 	if err != nil {
@@ -385,7 +409,7 @@ func syncSingleFile(srv *drive.Service, localFilePath, remoteFolderID, fileMask 
 	if exists {
 		if driveFile.Md5Checksum == localHash {
 			fmt.Printf("File '%s' is up-to-date on Google Drive. Skipping upload.\n", relativePath)
-			return nil // Файл не изменился, пропускаем его
+			return nil // File has not changed, skip it
 		} else {
 			fmt.Printf("File '%s' has changed. Updating on Google Drive...\n", relativePath)
 			err = uploadFile(srv, remoteFolderID, localFilePath, driveFile)
@@ -394,7 +418,7 @@ func syncSingleFile(srv *drive.Service, localFilePath, remoteFolderID, fileMask 
 			}
 		}
 	} else {
-		// Если файл отсутствует на Google Drive, загружаем его
+		// If the file is missing on Google Drive, upload it
 		fmt.Printf("File '%s' does not exist on Google Drive. Uploading...\n", relativePath)
 		err = uploadFile(srv, remoteFolderID, localFilePath, nil)
 		if err != nil {
@@ -405,6 +429,7 @@ func syncSingleFile(srv *drive.Service, localFilePath, remoteFolderID, fileMask 
 	return nil
 }
 
+// Main function
 func main() {
 	flag.Parse()
 	if debug {
@@ -436,7 +461,7 @@ func main() {
 
 	rootFolderID := "root"
 	if driveId != "" {
-		rootFolderID = driveId // Используем driveId как корень, если он указан
+		rootFolderID = driveId // Use driveId as the root if specified
 	}
 
 	// Only one file upload is supported
