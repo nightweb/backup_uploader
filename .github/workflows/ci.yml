@@ -48,6 +48,10 @@ jobs:
       - name: Upload each artifact separately
         run: |
           for file in ./distr/*; do
+            if [[ "$file" == *.go ]]; then
+              echo "Skipping $file..."
+              continue
+            fi
             name=$(basename "$file")
             echo "Uploading $name..."
             curl -X POST \
