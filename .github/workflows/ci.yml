@@ -51,7 +51,11 @@ jobs:
         run: |
           git add distr/
           git commit -m "Add binaries for ${{ matrix.goos }}/{{ matrix.goarch }} version $VERSION"
-          git -c http.extraheader="AUTHORIZATION: Basic $(echo -n x-access-token:${{ secrets.CI_TOKEN }} | base64)" push origin HEAD:${{ github.ref }}
+          for i in {1..5}; do
+            git -c http.extraheader="AUTHORIZATION: Basic $(echo -n x-access-token:${{ secrets.CI_TOKEN }} | base64)" push origin HEAD:${{ github.ref }} && break
+            echo "Retrying git push..."
+            sleep 5
+          done
 
       - name: Archive binary
         run: |
