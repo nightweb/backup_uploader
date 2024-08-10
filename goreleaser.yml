@@ -1,0 +1,30 @@
+project_name: backup_uploader
+builds:
+  - id: backup_uploader
+    main: .
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - "-X main.version={{.Version}}"
+    binary: backup_uploader
+
+archive:
+  format: tar.gz
+  files:
+    - LICENSE
+release:
+  github:
+    owner: your_github_username
+    name: backup_uploader
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

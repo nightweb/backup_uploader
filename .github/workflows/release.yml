@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger release on version tags
+
+jobs:
+  release:
+    name: Release with GoReleaser
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.19'
+
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+
+      - name: Run GoReleaser
+        run: goreleaser release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
