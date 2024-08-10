@@ -77,10 +77,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Download binaries
+      - name: Download all artifacts
         uses: actions/download-artifact@v2
         with:
-          name: backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: ./distr/
+
+#      - name: Download binaries
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
