@@ -20,7 +20,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          persist-credentials: true  # Required to push back to the repo
+          persist-credentials: false  # No need to push back to the repo
           fetch-depth: 0  # Fetch all history for all tags and branches
 
       - name: Set up Go
@@ -38,30 +38,6 @@ jobs:
 
       - name: Move binary to distr directory
         run: mv backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }} ./distr/
-
-      - name: Configure Git user
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-
-      - name: Create new branch and push
-        run: |
-          git checkout -b build-output-${{ github.sha }}
-          git add distr/
-          git commit -m "Add binaries for ${{ matrix.goos }}/{{ matrix.goarch }} version $VERSION"
-          git push origin build-output-${{ github.sha }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v3
-        with:
-          token: ${{ secrets.CI_TOKEN }}
-          commit-message: "Add binaries for ${{ matrix.goos }}/{{ matrix.goarch }} version $VERSION"
-          branch: build-output-${{ github.sha }}
-          base: main
-          title: "Automated PR: Add binaries"
-          body: "This PR was automatically created by GitHub Actions."
 
       - name: Archive binary
         run: |
@@ -90,7 +66,7 @@ jobs:
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
