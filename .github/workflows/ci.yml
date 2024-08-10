@@ -39,6 +39,11 @@ jobs:
       - name: Move binary to distr directory
         run: mv backup_uploader_${{ matrix.goos }}_${{ matrix.goarch }} ./distr/
 
+      - name: Configure Git user
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
       - name: Create new branch and push
         run: |
           git checkout -b build-output-${{ github.sha }}
@@ -85,7 +90,7 @@ jobs:
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
