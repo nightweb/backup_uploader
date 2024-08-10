@@ -56,9 +56,10 @@ jobs:
               --data-binary @"$file" \
               "${{ steps.get_release.outputs.upload_url }}?name=$name"
           done
-      - name: Use extracted tag
-        run: echo "The extracted tag is ${{ env.tag }}"
-      - name: Commit changes to master
+      - name: Extract tag from github.ref
+        id: extract_tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Commit changes to release branch
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
